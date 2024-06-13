@@ -1,4 +1,4 @@
-#Goal of this Repo
+# Goal of this Repo
 Rebuilding the Compound V3 protocol as a way to better understand how the Compound V3 works
 
 # Sample Hardhat Project
