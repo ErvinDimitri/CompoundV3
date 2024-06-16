@@ -27,6 +27,11 @@ contract Comet is CometMainInterface{
         return uint40(block.timestamp);
     }
     
+    function doTransferIn( address asset, address from, uint amount) internal{
+        bool success = ERC20(asset).transferFrom( from, address(this), amount);
+        if( !success) revert TransferInFailed();
+    }
+
     // Calculate baseSupplyIndex and baseBorrowIndex
     function accruedInterestIndices( uint timeElapsed) internal view returns( uint64, uint64){
         uint64 baseSupplyIndex_ = baseSupplyIndex;
@@ -42,6 +47,7 @@ contract Comet is CometMainInterface{
     }
 
     // Updates trackingSupplyIndex and trackingBorrowIndex
+    // It's called everytime the user interacts with the protocol
     function accrueInternal() internal{
         uint40 now_ = getNowInternal();
         uint timeElapsed = uint256( now_ - lastAccrualTime);
@@ -57,6 +63,38 @@ contract Comet is CometMainInterface{
         }
     }
 
+    /* F() called when a user deposits
+       Updates the principal value of the user: 
+        1.convert the principal value to present value and sum with deposited amount
+        2. Convert back to principal value
+       Update the totalizers vars: totalSupplyBase and totalBorrowBase
+    */
+    function supplyBase( address from, address dst, uint356 amount) internal{
+        doTransferIn( baseToken, from, amount);
+
+        accrueInternal();
+
+        UserBasic memory dstUser = userBasic[dst];
+        int104 dstPrincipal = dstUser.principal;
+        int256 dstBalance = presentValue(dstPrincipal) + signed256( amount);
+        int104 dstPrincipalNew = principalValue(dstBalance);
+
+        (uint104 repayAmount, uint104 supplyAmount) = repayAndSupply( dstPrincipal, dstPrincipalNew);
+
+        totalSupplyBase += supplyAmount;
+        totalBorrowBase -= repayAmount;
+
+        updateBasePrincipal( dst, dstUser, dstPrincipalNew);
+
+        emit Supply( from, dst, amount);
+
+        if( supplyAmount > 0){
+            emit Transfer( address(0), dst, presentValueSupply( baseSupplyIndex, supplyAmount));
+        }
+    }
+
+
+    // Get lender's balance; It increases over time as long as utilization doesnt become 0
     function balanceOf( address account) override public view returns( uint256){
         (uint64 baseSupplyIndex_, ) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
         int104 principal = UserBasic[account].principal;

@@ -12,7 +12,7 @@ contract CometStorage {
     }
 
     uint64 internal baseSupplyIndex;  // it's an "exchange rate" to swap present value to principal value and vice versa
-    uint64 internal baseBorrowIndex;
+    uint64 internal baseBorrowIndex;  // Tracks the accumulation of debt
     uint64 internal trackingSupplyIndex;
     uint64 internal trackingBorrowIndex;
     uint104 internal totalSupplyBase;  // sum of all amount deposited by lenders
