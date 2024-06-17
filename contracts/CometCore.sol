@@ -33,7 +33,7 @@ abstract contract CometCore is CometConfiguration, CometStorage, CometMath{
         if( presentValue_ >= 0){
             return signed104( principalValueSupply( baseSupplyIndex, uint256( presentValue_)));
         }else{
-            return -signed104( principalValueBorrow( baseBorrowIndex, uint256( presentValue_)));
+            return -signed104( principalValueBorrow( baseBorrowIndex, uint256( -presentValue_)));
         }
     }
     function principalValueSupply( uint64 baseSupplyIndex_, uint256 presentValue_) internal pure returns(uint104){
