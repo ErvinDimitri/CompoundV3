@@ -100,4 +100,16 @@ contract Comet is CometMainInterface{
         int104 principal = UserBasic[account].principal;
         return principal > 0 ? presentValueSupply( baseSupplyIndex_, unsigned104( principal)) : 0;
     }
+
+    // Calculate present value of the total USDC deposited
+    function totalSupply() override external view returns(uint256){
+        (uint256 baseSupplyIndex_, ) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
+        return presentValueSupply( totalSupplyBase, baseSupplyIndex_);
+    }
+
+    // Calculate the present value of the total USDC borrowed (accrued interest is included)
+    function totalBorrow() override external view returns( uint256){
+        (, uint256 baseBorrowIndex_) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
+        return presentValueBorrow( totalBorrowBase, baseBorrowIndex_);
+    }
 }
