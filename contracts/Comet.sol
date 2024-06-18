@@ -112,4 +112,14 @@ contract Comet is CometMainInterface{
         (, uint256 baseBorrowIndex_) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
         return presentValueBorrow( totalBorrowBase, baseBorrowIndex_);
     }
+
+    function transfer(address dst, uint256 amount) override external returns(bool){
+        transferInternal( msg.sender, msg.sender, dst, baseToken, amount);
+        return true;
+    }
+
+    function transferFrom( address src, address dst, uint256 amount) override external returns(bool){
+        transferInternal( msg.sender, src, dst, baseToken, amount);
+        return true;
+    }
 }
