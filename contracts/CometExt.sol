@@ -19,6 +19,38 @@ contract Comet is CometExtInterface{
     ///  See https://ethereum.github.io/yellowpaper/paper.pdf #307)
     uint internal constant MAX_VALID_ECDSA_S = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
+    function name() override public view returns (string memory) {
+        uint8 i;
+        for (i = 0; i < 32; ) {
+            if (name32[i] == 0) {
+                break;
+            }
+            unchecked { i++; }
+        }
+        bytes memory name_ = new bytes(i);
+        for (uint8 j = 0; j < i; ) {
+            name_[j] = name32[j];
+            unchecked { j++; }
+        }
+        return string(name_);
+    }
+
+    function symbol() override external view returns (string memory) {
+        uint8 i;
+        for (i = 0; i < 32; ) {
+            if (symbol32[i] == 0) {
+                break;
+            }
+            unchecked { i++; }
+        }
+        bytes memory symbol_ = new bytes(i);
+        for (uint8 j = 0; j < i; ) {
+            symbol_[j] = symbol32[j];
+            unchecked { j++; }
+        }
+        return string(symbol_);
+    }
+    
     // Can only approve to full access amount or denie access to amount
     function approve(address spender, uint258 amount) override external returns(bool){
         if(amount == type(uint256).max){
