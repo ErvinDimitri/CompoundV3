@@ -22,11 +22,15 @@ contract Comet is CometMainInterface{
     }
 
     // @return the timestamp in uint40
-    function getNowInternal() virtual internal view returns(uint40){
+    function getNowInternal() override internal view returns(uint40){
         if( block.timestamp >= 2**40) revert TimestampTooLarge();
         return uint40(block.timestamp);
     }
     
+    function isTransferPaused() override public view returns(bool){
+        return toBool( pauseFlags & (uint8(1) << PAUSE_TRANSFER_OFFSET));
+    }
+
     function doTransferIn( address asset, address from, uint amount) internal{
         bool success = ERC20(asset).transferFrom( from, address(this), amount);
         if( !success) revert TransferInFailed();
@@ -121,5 +125,20 @@ contract Comet is CometMainInterface{
     function transferFrom( address src, address dst, uint256 amount) override external returns(bool){
         transferInternal( msg.sender, src, dst, baseToken, amount);
         return true;
+    }
+
+    // can transfer base asset or collateral
+    function transferInternal( address operator, address src, address dst, address baseToken, uint256 amount) internal{
+       if(isTransferPaused()) revert Paused();
+       if (!hasPermission( src, operator)) revert Unauthorized();
+       if( src==dst) revert NoSelfTransfer();
+       if( asset == baseToken){
+            if( amount == type(uint256).max){
+                amount=balanceOf(src);
+            }
+            return transferBase( src, dst, amount);
+       }else{
+        return transferCollateral( src, dst, asset,safe128(amount));
+       }
     }
 }

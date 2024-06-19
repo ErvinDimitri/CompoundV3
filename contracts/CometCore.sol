@@ -6,10 +6,20 @@ import "./CometMath.sol";
 import "./CometStorage.sol";
 abstract contract CometCore is CometConfiguration, CometStorage, CometMath{
 
+    uint8 internal constant PAUSE_SUPPLY_OFFSET = 0;
+    uint8 internal constant PAUSE_TRANSFER_OFFSET = 1;
+    uint8 internal constant PAUSE_WITHDRAW_OFFSET = 2;
+    uint8 internal constant PAUSE_ABSORB_OFFSET = 3;
+    uint8 internal constant PAUSE_BUY_OFFSET = 4;
+    
     // depends on time/rate scales and not on base token
     uint64 internal constant BASE_INDEX_SCALE = 1e15;
 
     uint64 internal constant FACTOR_SCALE = 1e18;
+
+    function hasPermission( address owner, address manager) public view returns(bool){
+        return owner==manager || isAllowed[owner][manager];
+    }
 
     // ------- PRESENT VALUE --------------
     // PresentValue() receives a signed value as parameter and returns a signed value
