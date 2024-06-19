@@ -141,4 +141,17 @@ contract Comet is CometMainInterface{
         return transferCollateral( src, dst, asset,safe128(amount));
        }
     }
+
+    // Responsable from calling ComitExt.sol f()
+    fallback() external payable{
+        address delegate = extensionDelegate;
+        assembly{
+            calldatacopy(0,0,calldatasize())
+            let result := delegatecall( gas(), delegate, 0 calldatasize(),0,0)
+            returndatacopy(0,0,returndatasize())
+            switch result
+            case 0 {revert( 0, returndatasize())}
+            default {return( 0, returndatasize())}
+        }
+    }
 }
