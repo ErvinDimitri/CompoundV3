@@ -4,6 +4,21 @@ pragma solidity ^0.8.9;
 import "./CometExtInterface.sol";
 contract Comet is CometExtInterface{
 
+   /// @notice The major version of this contract
+    string public override constant version = "0";
+
+    /** Internal constants **/
+
+    /// @dev The EIP-712 typehash for the contract's domain
+    bytes32 internal constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+
+    /// @dev The EIP-712 typehash for allowBySig Authorization
+    bytes32 internal constant AUTHORIZATION_TYPEHASH = keccak256("Authorization(address owner,address manager,bool isAllowed,uint256 nonce,uint256 expiry)");
+
+    /// @dev The highest valid value for s in an ECDSA signature pair (0 < s < secp256k1n ÷ 2 + 1)
+    ///  See https://ethereum.github.io/yellowpaper/paper.pdf #307)
+    uint internal constant MAX_VALID_ECDSA_S = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
+
     // Can only approve to full access amount or denie access to amount
     function approve(address spender, uint258 amount) override external returns(bool){
         if(amount == type(uint256).max){
