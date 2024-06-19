@@ -19,4 +19,6 @@ contract CometStorage {
     uint104 internal totalBorrowBase;  // sum of all amount deposited by borrowers
     uint40 internal lastAccrualTime;  // updated @ Comet::accrueInternal()
     uint8 internal pauseFlags;
+
+    mapping(address => mapping( address => bool)) public isAllowed;
 }
