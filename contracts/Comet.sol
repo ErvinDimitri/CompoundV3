@@ -9,6 +9,15 @@ contract Comet is CometMainInterface{
     /** Collateral asset configuration (packed) 
         AssetInfo = assetXX_a + assetXX_b
     **/
+    // number of assets the protocol supports
+    uint8 public override immutable numAssets;
+    uint public override immutable baseScale;
+    uint public override immutable baseMinForRewards;
+    uint public override immutable baseTrackingSupplySpeed;
+    uint public override immutable baseTrackingBorrowSpeed;
+    address public override immutable baseToken;
+    address public override immutable extensionDelegate;
+
 
     uint256 internal immutable asset00_a;
     uint256 internal immutable asset00_b;
@@ -65,7 +74,7 @@ contract Comet is CometMainInterface{
     //     getPacketAssetInternal()                             getAssetInfo()
     // AssetConfig -> assetXX_a, assetXX_b       assetXX_a, assetXX_b -> AssetInfo   assetXX_a, assetXX_b store the  AssetInfo values
     // Pack one asset at time
-    function getPackedAssetInternal(AssetConfig[] memory assetConfigs, uint8 i) internal view return(uint256, uint256){
+    function getPackedAssetInternal(AssetConfig[] memory assetConfigs, uint8 i) internal view returns(uint256, uint256){
         AssetConfig memory assetConfig;
         if( i<assetConfig.length){
             assembly{  // store in assetConfig = assetConfigs[i]
@@ -213,6 +222,9 @@ contract Comet is CometMainInterface{
         return n*factor/FACTOR_SCALE;
     }
 
+    function divBaseWei(uint n, uint baseWei) internal view returns (uint) {
+        return n * baseScale / baseWei;
+    }
     // @return the timestamp in uint40
     function getNowInternal() override internal view returns(uint40){
         if( block.timestamp >= 2**40) revert TimestampTooLarge();
@@ -250,10 +262,10 @@ contract Comet is CometMainInterface{
         if(timeElapsed > 0){
             (baseSupplyIndex, baseBorrowIndex) = accruedInterestIndices( timeElapsed);
             if( totalSupplyBase >= baseMinForRewards){
-                trackingSupplyIndex += safe64( divBaseWei(basTrackingSupplySpeed * timeElapsed, totalSupplyBase));                
+                trackingSupplyIndex += safe64( divBaseWei(baseTrackingSupplySpeed * timeElapsed, totalSupplyBase));                
             }
             if( totalBorrowBase >= baseMinForRewards){
-                trackingBorrowIndex += safe64(devBaseWei( baseTrackingBorrowSpeed * timeElapsed, totalBorrowBase));
+                trackingBorrowIndex += safe64(divBaseWei( baseTrackingBorrowSpeed * timeElapsed, totalBorrowBase));
             }
             lastAccrualTime = now_;
         }
@@ -265,7 +277,27 @@ contract Comet is CometMainInterface{
         2. Convert back to principal value
        Update the totalizers vars: totalSupplyBase and totalBorrowBase
     */
-    function supplyBase( address from, address dst, uint356 amount) internal{
+
+    // ToDo To implement
+    function getSupplyRate( uint utilization) override public view returns( uint64){
+        return 0;
+    }
+
+    // ToDo to Implement
+    function getBorrowRate( uint utilization) override public view returns( uint64){
+        return 0;
+    }
+
+    // ToDo To implement
+    function repayAndSupplyAmount( int104 oldPrincipal, int104 newPrincipal) internal pure returns( uint104, uint104){
+
+    }
+
+    // ToDo to implement
+    function updateBasePrincipal( address account, UserBasic memory userBasic, int104 principalNew) internal{
+
+    }
+    function supplyBase( address from, address dst, uint256 amount) internal{
         doTransferIn( baseToken, from, amount);
 
         accrueInternal();
@@ -275,7 +307,7 @@ contract Comet is CometMainInterface{
         int256 dstBalance = presentValue(dstPrincipal) + signed256( amount);
         int104 dstPrincipalNew = principalValue(dstBalance);
 
-        (uint104 repayAmount, uint104 supplyAmount) = repayAndSupply( dstPrincipal, dstPrincipalNew);
+        (uint104 repayAmount, uint104 supplyAmount) = repayAndSupplyAmount( dstPrincipal, dstPrincipalNew);
 
         totalSupplyBase += supplyAmount;
         totalBorrowBase -= repayAmount;
@@ -320,7 +352,7 @@ contract Comet is CometMainInterface{
     }
 
     // can transfer base asset or collateral
-    function transferInternal( address operator, address src, address dst, address baseToken, uint256 amount) internal{
+    function transferInternal( address operator, address src, address dst, address asset, uint256 amount) internal{
        if(isTransferPaused()) revert Paused();
        if (!hasPermission( src, operator)) revert Unauthorized();
        if( src==dst) revert NoSelfTransfer();
@@ -334,12 +366,21 @@ contract Comet is CometMainInterface{
        }
     }
 
+    // ToDo To implement
+    function transferBase( address src, address dst, uint256 amount) internal{
+
+    }
+
+    // ToDo to implement
+    function transferCollateral( address src, address dst, address asset, uint128 amount) internal{
+        
+    }
     // Responsable from calling ComitExt.sol f()
     fallback() external payable{
         address delegate = extensionDelegate;
         assembly{
             calldatacopy(0,0,calldatasize())
-            let result := delegatecall( gas(), delegate, 0 calldatasize(),0,0)
+            let result := delegatecall( gas(), delegate, 0, calldatasize(),0,0)
             returndatacopy(0,0,returndatasize())
             switch result
             case 0 {revert( 0, returndatasize())}

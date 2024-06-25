@@ -52,7 +52,7 @@ contract Comet is CometExtInterface{
     }
     
     // Can only approve to full access amount or denie access to amount
-    function approve(address spender, uint258 amount) override external returns(bool){
+    function approve(address spender, uint256 amount) override external returns(bool){
         if(amount == type(uint256).max){
             allowInternal(msg.sender, spender, true);
         } else if( amount == 0){

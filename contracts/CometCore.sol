@@ -14,7 +14,7 @@ abstract contract CometCore is CometConfiguration, CometStorage, CometMath{
     uint8 internal constant PAUSE_BUY_OFFSET = 4;
     
     uint8 internal constant PRICE_FEED_DECIMALS = 8;
-    
+
     // depends on time/rate scales and not on base token
     uint64 internal constant BASE_INDEX_SCALE = 1e15;
 
@@ -41,7 +41,7 @@ abstract contract CometCore is CometConfiguration, CometStorage, CometMath{
         if( principalValue_ >= 0){  // Supply balance
             return signed256( presentValueSupply( baseSupplyIndex, uint104( principalValue_)));
         }else{  // Borrower balance
-            return -signed256( presentValueBorrow( baseBorrowIndex, uint104( -principalValue_)))
+            return -signed256( presentValueBorrow( baseBorrowIndex, uint104( -principalValue_)));
         }
     }
     function presentValueSupply( uint64 baseSupplyIndex_, uint104 principalValue_) internal pure returns(uint256){
@@ -65,6 +65,6 @@ abstract contract CometCore is CometConfiguration, CometStorage, CometMath{
     }
 
     function principalValueBorrow( uint64 baseBorrowIndex_, uint256 principalValue_) internal pure returns(uint104){
-        return safe104( (presentValue_ * BASE_INDEX_SCALE + baseBorrowIndex_ -1) / baseBorrowIndex_);
+        return safe104( (principalValue_ * BASE_INDEX_SCALE + baseBorrowIndex_ -1) / baseBorrowIndex_);
     }
 }

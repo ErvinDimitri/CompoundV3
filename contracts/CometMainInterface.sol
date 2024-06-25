@@ -11,10 +11,14 @@ abstract contract CometMainInterface is CometCore{
     error BadPrice();
     error BorrowCFTooLarge();
     error LiquidateCFTooLarge();
+    error NoSelfTransfer();
     error Paused();
+    error TimestampTooLarge();
     error TransferInFailed();
     error Unauthorized();
 
+    event Supply( address indexed from, address indexed dst, uint amount);
+    event Transfer( address indexed from, address indexed to, uint amount);
     function getAssetInfo( uint8 i) virtual public view returns( AssetInfo memory);
     function getUtilization() virtual public view returns(uint);
     function totalSupply() virtual external view returns(uint256);
@@ -23,4 +27,7 @@ abstract contract CometMainInterface is CometCore{
     function balanceOf( address account) virtual public view returns( uint256);
     function transfer(address dst, uint256 amount) virtual external returns(bool);
     function transferFrom( address src, address dst, uint256 amount) virtual external returns(bool);
+    function getSupplyRate( uint utilization) virtual public view returns( uint64);
+    function getBorrowRate( uint utilization) virtual public view returns( uint64);
+
 }   
