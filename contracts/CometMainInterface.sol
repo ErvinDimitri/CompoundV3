@@ -5,7 +5,17 @@ import "./CometCore.sol";
 
 // Interface for Comet.sol
 abstract contract CometMainInterface is CometCore{
+    error Absurd();
+    error BadAsset();
+    error BadDecimals();
+    error BadPrice();
+    error BorrowCFTooLarge();
+    error LiquidateCFTooLarge();
+    error Paused();
+    error TransferInFailed();
+    error Unauthorized();
 
+    function getAssetInfo( uint8 i) virtual public view returns( AssetInfo memory);
     function getUtilization() virtual public view returns(uint);
     function totalSupply() virtual external view returns(uint256);
     function totalBorrow() virtual external view returns(uint256);

@@ -6,17 +6,31 @@ import "./CometMath.sol";
 import "./CometStorage.sol";
 abstract contract CometCore is CometConfiguration, CometStorage, CometMath{
 
+    uint64 internal constant MAX_COLLATERAL_FACTOR = FACTOR_SCALE;  // 1:1
     uint8 internal constant PAUSE_SUPPLY_OFFSET = 0;
     uint8 internal constant PAUSE_TRANSFER_OFFSET = 1;
     uint8 internal constant PAUSE_WITHDRAW_OFFSET = 2;
     uint8 internal constant PAUSE_ABSORB_OFFSET = 3;
     uint8 internal constant PAUSE_BUY_OFFSET = 4;
     
+    uint8 internal constant PRICE_FEED_DECIMALS = 8;
+    
     // depends on time/rate scales and not on base token
     uint64 internal constant BASE_INDEX_SCALE = 1e15;
 
     uint64 internal constant FACTOR_SCALE = 1e18;
-
+    
+    struct AssetInfo{  // From the the same from CometConfiguration.sol
+        uint8 offset;
+        address asset;
+        address priceFeed;
+        uint8 scale;
+        uint64 borrowCollateralFactor;
+        uint64 liquidateCollateralFactor; 
+        uint64 liquidationFactor; 
+        uint128 supplyCap;
+    } 
+    
     function hasPermission( address owner, address manager) public view returns(bool){
         return owner==manager || isAllowed[owner][manager];
     }

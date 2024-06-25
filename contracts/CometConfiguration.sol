@@ -36,13 +36,16 @@ contract CometConfiguration{
         AssetConfig[] assetConfigs;
     }
 
+    // Uses 2 slots so the values are packet into 2 uint vars: assetXX_a and assetXX_b
     struct AssetConfig{
+        // Slot 1 (256 bits)
         address asset;
-        address priceFeed;
+        address priceFeed;  // Price in USD of the asset
         uint8 decimals;
+        // Slot 2 (256 bits)
         uint64 borrowCollateralFactor;  // ration between borrow amount vs collateral amount
-        uint64 liquidationCollateralFactor;
-        uint64 liquidationFactor;
-        uint64 supplyCap;
+        uint64 liquidateCollateralFactor;  // Loan To Valur(LTV) at which the loan gets liquidated
+        uint64 liquidationFactor;  // Liquidation penalty=1-liquidationFactor | encodes liquidation penalty
+        uint128 supplyCap;
     }
 }
