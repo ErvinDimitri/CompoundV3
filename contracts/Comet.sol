@@ -17,6 +17,7 @@ contract Comet is CometMainInterface{
     uint public override immutable baseTrackingBorrowSpeed;
     address public override immutable baseToken;
     address public override immutable extensionDelegate;
+    address public override immutable baseTokenPriceFeed;
 
 
     uint256 internal immutable asset00_a;
@@ -225,6 +226,15 @@ contract Comet is CometMainInterface{
     function divBaseWei(uint n, uint baseWei) internal view returns (uint) {
         return n * baseScale / baseWei;
     }
+
+    // Since assetsIn stores the flags(1) for what assets are being used as collateral
+    // This f() checks if the borrower holds a particular asset
+    function isInAsset( uint16 assetsIn, uint8 assetOffset) internal pure returns(bool){
+        return (assetsIn & (uint16(1) << assetOffset) != 0);
+    }
+    function signedMulPrice(int n, uint price, uint64 fromScale) internal pure returns (int) {
+        return n * signed256(price) / int256(uint256(fromScale));
+    }
     // @return the timestamp in uint40
     function getNowInternal() override internal view returns(uint40){
         if( block.timestamp >= 2**40) revert TimestampTooLarge();
@@ -373,8 +383,79 @@ contract Comet is CometMainInterface{
 
     // ToDo to implement
     function transferCollateral( address src, address dst, address asset, uint128 amount) internal{
-        
+
     }
+    function isLiquidatable( address account) override public view returns(bool){
+        int104 principal = userBasic[account].principal;
+        if( principal>=0){
+            return false;  // Means that it is not a borrower
+        }
+        uint16 assetsIn = userBasic[account].assetsIn;
+        int liquidity = signedMulPrice(  // Calculate the borrow amount in USD, it start negative
+            presentValue(principal),
+            getPrice(baseTokenPriceFeed),
+            uint64(baseScale)
+        );
+
+        for( uint8 i=0; i<numAssets;){
+            if( isInAsset( assetsIn, i)){
+                if(liquidity >= 0){  // checks if the amount of collateral sumed until now is greater than the borrow amount 
+                    return false;
+                }
+
+                AssetInfo memory asset = getAssetInfo(i);
+                uint newAmount = mulPrice(  // balance of the asset's collateral * price in USD
+                    userCollateral[account][asset.asset].balance,
+                    getPrice(asset.priceFeed),
+                    asset.scale
+                );
+                liquidity += signed256( mulFactor(  // each collateral asset is weight according to its liquidateCollateralFactor
+                    newAmount,
+                    asset.liquidateCollateralFactor
+                ));
+            }
+            unchecked{ i++;}
+        }
+        return liquidity < 0;  // it continues negative, isLiquidatable
+    }
+
+    // Liquidates a list of accounts
+    function absorb(address absorber, address[] calldata accounts) override external{
+
+    }
+
+    function absorbInternal( address absorber, address account) internal{
+        if( !isLiquidatable(account)) revert NotLiquidatable();
+
+        UserBasic memory accountUser = userBasic[account];
+        int104 oldPrincipal = accountUser.principal;
+        int256 oldBalance = presentValue( oldPrincipal);
+        uint256 assetsIn = accountUser.assetsIn;
+
+        uint256 basePrice = getPrice( baseTokenPriceFeed);
+        uint deltaValue = 0;  // stores the sum of account's all assets value based on LiquidationFactor
+
+        for( uint8 i=0; i<numAssets){
+            // Reset the user's collateral on each asset
+            if( isInAsset(assetsIn, i)){
+                AssetInfo memory assetInfo = getAssetInfo(i);
+                address asset = assetInfo.asset;
+                uint128 seizeAmount = userCollateral[account][asset].balance;
+                userCollateral[account][asset].balance = 0;
+                totalsCollateral[asset].totalSupplyAsset -= seizeAmount;
+
+                // value = asset amount in usd
+                uint256 value = mulPrice( seizeAmount, getPrice(assetInfo.priceFeed), assetInfo.scale);
+                deltaValue += mulFactor( value, assetInfo.liquidationFactor);
+
+                emit AbsorbCollateral( absorber, account, asset, seizeAmount, value);
+            }
+            unchecked{ i++;}
+        }
+        uint256 deltaBalance = divPrice( deltaValue, basePrice, uint64(baseScale));
+    
+    }
+
     // Responsable from calling ComitExt.sol f()
     fallback() external payable{
         address delegate = extensionDelegate;
