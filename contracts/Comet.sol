@@ -507,6 +507,21 @@ contract Comet is CometMainInterface{
         }
     }
 
+    function buyCollateral( address asset, uint256 minAmount, uint256 baseAmount, address recipient) override external{
+        if( isBuyPaused()) revert Paused();
+
+        int reserves = getReserves();
+        if( reserves >= 0 && uint(reserves) >= targetReserves) revert NotForSale();
+
+        doTransferIn( baseToken, msg.sender, baseAmount);
+
+        uint256 collateralAmount = quoteCollateral( asset, baseAmount);
+        if( collateralAmount < minAmount) revert TooMuchSlippage();
+        if( collateralAmount > getCollateralReserves( asset)) revert InsufficientReserves();
+        
+        doTransferOut( asset, recipient, safe128( collateralAmount));
+        emit BuyCollateral( msg.sender, asset, baseAmount, collateralAmount);
+    }
     // Responsable from calling ComitExt.sol f()
     fallback() external payable{
         address delegate = extensionDelegate;
