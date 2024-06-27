@@ -25,9 +25,9 @@ abstract contract CometCore is CometConfiguration, CometStorage, CometMath{
         address asset;
         address priceFeed;
         uint8 scale;
-        uint64 borrowCollateralFactor;
-        uint64 liquidateCollateralFactor; 
-        uint64 liquidationFactor; 
+        uint64 borrowCollateralFactor;  // Amount that can be borrowed (%)
+        uint64 liquidateCollateralFactor;   // Point when the collateral gets liquidated (%)
+        uint64 liquidationFactor;  // Liquidation penality = 1 - liquidationFactor | A fee to pay for being liquidated
         uint128 supplyCap;
     } 
     

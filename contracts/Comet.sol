@@ -227,6 +227,9 @@ contract Comet is CometMainInterface{
         return n * baseScale / baseWei;
     }
 
+    function divPrice(uint n, uint price, uint64 toScale) internal pure returns (uint) {
+        return n * toScale / price;
+    }
     // Since assetsIn stores the flags(1) for what assets are being used as collateral
     // This f() checks if the borrower holds a particular asset
     function isInAsset( uint16 assetsIn, uint8 assetOffset) internal pure returns(bool){
@@ -243,6 +246,14 @@ contract Comet is CometMainInterface{
     
     function isTransferPaused() override public view returns(bool){
         return toBool( pauseFlags & (uint8(1) << PAUSE_TRANSFER_OFFSET));
+    }
+
+    function isAbsorbPaused() override public view returns (bool) {
+        return toBool(pauseFlags & (uint8(1) << PAUSE_ABSORB_OFFSET));
+    }
+
+    function isBuyPaused() override public view returns (bool) {
+        return toBool(pauseFlags & (uint8(1) << PAUSE_BUY_OFFSET));
     }
 
     function doTransferIn( address asset, address from, uint amount) internal{
@@ -421,7 +432,22 @@ contract Comet is CometMainInterface{
 
     // Liquidates a list of accounts
     function absorb(address absorber, address[] calldata accounts) override external{
+        if( isAbsorbPaused()) revert Paused();
 
+        uint256 startGas = gasleft();
+        accrueInternal();
+
+        for(uint256 i=0; i<accounts.length;){
+            absorbInternal( absorber, accounts[i]);
+            unchecked{i++;}
+        }
+
+        uint256 gasUsed = startGas - gasleft();
+        liquidatorPoints memory points = liquidatorPoints[ absorber];
+        points.numAbsorbs++;
+        points.numAbsorbed += safe64( accounts.length);
+        points.approxSpend += safe128( gasUsed * block.basefee);
+        liquidatorPoints[absorb] = points;
     }
 
     function absorbInternal( address absorber, address account) internal{
@@ -444,16 +470,41 @@ contract Comet is CometMainInterface{
                 userCollateral[account][asset].balance = 0;
                 totalsCollateral[asset].totalSupplyAsset -= seizeAmount;
 
-                // value = asset amount in usd
+                // value = asset amount in usdc
                 uint256 value = mulPrice( seizeAmount, getPrice(assetInfo.priceFeed), assetInfo.scale);
+                // deltaValue = sum of collaterals for penalties
                 deltaValue += mulFactor( value, assetInfo.liquidationFactor);
 
                 emit AbsorbCollateral( absorber, account, asset, seizeAmount, value);
             }
             unchecked{ i++;}
         }
+        // convert to usd
         uint256 deltaBalance = divPrice( deltaValue, basePrice, uint64(baseScale));
-    
+        int256 newBalance = oldBalance + signed256( deltaBalance);
+
+        // After liquidation, the borrower becomes the supplyer, so in case the balance is still negative, it's set to zero
+        if( newBalance < 0){
+            newBalance = 0;
+        }
+
+        int104 newPrincipal = principalValue( newBalance);
+        updateBasePrincipal( account, accountUser, newPrincipal);
+
+        userBasic[account].assetsIn = 0;
+
+        (uint104 repayAmount, uint104 supplyAmount) = repayAndSupplyAmount( oldPrincipal, newPrincipal);
+
+        totalSupplyBase += supplyAmount;
+        totalBorrowBase -= repayAmount;
+
+        uint256 basePaidOut = unsigned256( newBalance - oldBalance);
+        uint256 valueOfBasePaidOut = mulPrice( basePaidOut, basePrice, uint64( baseScale));
+        emit AbsorbDebit( absorber, account, basePaidOut, valueOfBasePaidOut);
+
+        if(newPrincipal > 0){
+            emit Transfer( address(0), account, presentValueSupply( baseSupplyIndex, unsigned104(newPrincipal)));
+        }
     }
 
     // Responsable from calling ComitExt.sol f()

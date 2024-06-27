@@ -21,6 +21,8 @@ abstract contract CometMainInterface is CometCore{
     event Supply( address indexed from, address indexed dst, uint amount);
     event Transfer( address indexed from, address indexed to, uint amount);
     event AbsorbCollateral( address indexed absorber, address indexed borrower, address indexed asset, uint collateralAbsorbed, uint usdValue);
+    event AbsorbDebit( address indexed absorber, address indexed account, uint256 basePaidOut, uint256 valueOfBasePaidOut);
+    
     function getAssetInfo( uint8 i) virtual public view returns( AssetInfo memory);
     function getUtilization() virtual public view returns(uint);
     function totalSupply() virtual external view returns(uint256);
