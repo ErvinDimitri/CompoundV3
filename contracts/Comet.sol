@@ -430,7 +430,7 @@ contract Comet is CometMainInterface{
         return liquidity < 0;  // it continues negative, isLiquidatable
     }
 
-    // Liquidates a list of accounts
+    // Liquidates a list of accounts.
     function absorb(address absorber, address[] calldata accounts) override external{
         if( isAbsorbPaused()) revert Paused();
 
