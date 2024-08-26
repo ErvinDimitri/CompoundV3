@@ -461,7 +461,7 @@ contract Comet is CometMainInterface{
         uint256 basePrice = getPrice( baseTokenPriceFeed);
         uint deltaValue = 0;  // stores the sum of account's all assets value based on LiquidationFactor
 
-        for( uint8 i=0; i<numAssets){
+        for( uint8 i=0; i<numAssets;){
             // Reset the user's collateral on each asset
             if( isInAsset(assetsIn, i)){
                 AssetInfo memory assetInfo = getAssetInfo(i);
