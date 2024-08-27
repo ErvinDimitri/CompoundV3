@@ -19,6 +19,16 @@ contract Comet is CometExtInterface{
     ///  See https://ethereum.github.io/yellowpaper/paper.pdf #307)
     uint internal constant MAX_VALID_ECDSA_S = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
+    /// @dev The ERC20 name for wrapped base token
+    bytes32 internal immutable name32;
+
+    /// @dev The ERC20 symbol for wrapped base token
+    bytes32 internal immutable symbol32;
+
+    constructor( ExtConfiguration memory config){
+        name32 = config.name32;
+        symbol32 = config.symbol32;
+    }
     function name() override public view returns (string memory) {
         uint8 i;
         for (i = 0; i < 32; ) {

@@ -8,6 +8,8 @@ abstract contract CometMainInterface is CometCore{
     error Absurd();
     error BadAsset();
     error BadDecimals();
+    error BadDiscount();
+    error BadMinimum();
     error BadPrice();
     error BorrowCFTooLarge();
     error InsufficientReserves();
@@ -17,8 +19,10 @@ abstract contract CometMainInterface is CometCore{
     error NotLiquidatable();
     error Paused();
     error TimestampTooLarge();
+    error TooManyAssets();
     error TooMuchSlippage();
     error TransferInFailed();
+    error TransferOutFailed();
     error Unauthorized();
 
     event Supply( address indexed from, address indexed dst, uint amount);
@@ -33,6 +37,8 @@ abstract contract CometMainInterface is CometCore{
     function totalBorrow() virtual external view returns(uint256);
     function isLiquidatable( address account) virtual public view returns(bool);
     function isTransferPaused() virtual public view returns(bool);
+    function isAbsorbPaused() virtual public view returns (bool);
+    function isBuyPaused() virtual public view returns (bool);
     function absorb(address absorber, address[] calldata accounts) virtual external;
     function buyCollateral( address asset, uint256 minAmount, uint256 baseAmount, address recipient) virtual external;
     function balanceOf( address account) virtual public view returns( uint256);
@@ -40,5 +46,20 @@ abstract contract CometMainInterface is CometCore{
     function transferFrom( address src, address dst, uint256 amount) virtual external returns(bool);
     function getSupplyRate( uint utilization) virtual public view returns( uint64);
     function getBorrowRate( uint utilization) virtual public view returns( uint64);
+    function getReserves() virtual public view returns(int);
+    function quoteCollateral( address asset, uint baseAmount) virtual public view returns(uint);
+    function getAssetInfoByAddress( address asset) virtual public view returns( AssetInfo memory);
+    function getCollateralReserves( address asset) virtual public view returns(uint);
+    function getPrice(address priceFeed) virtual public view returns (uint256);
+    function numAssets() virtual external view returns(uint8);
+    function baseScale() virtual external view returns(uint);
+    function baseMinForRewards() virtual external view returns(uint);
+    function baseTrackingSupplySpeed() virtual external view returns(uint);
+    function baseTrackingBorrowSpeed() virtual external view returns(uint);
+    function baseToken() virtual external view returns(address);
+    function extensionDelegate() virtual external view returns(address);
+    function baseTokenPriceFeed() virtual external view returns(address);
+    function targetReserves() virtual external view returns(uint);
+    function decimals() virtual external view returns(uint8);
 
 }   

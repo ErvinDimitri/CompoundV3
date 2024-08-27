@@ -39,6 +39,7 @@ contract CometStorage {
 
     mapping( address => TotalsCollateral) public totalsCollateral;  // Total of deposited collateral by asset
     mapping(address => mapping( address => bool)) public isAllowed;
+    mapping(address=>uint) public userNonce; //Next expected nonce for an addr
     mapping( address => UserBasic) public userBasic;
     mapping( address => mapping( address => UserCollateral)) public userCollateral;  // Stores the collateral deposited on any of the assets( Comp, wBtc, wEth, Link, Uni)
     mapping( address => LiquidatorPoints) public liquidatorPoints;

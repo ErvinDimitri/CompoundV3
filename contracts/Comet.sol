@@ -18,6 +18,8 @@ contract Comet is CometMainInterface{
     address public override immutable baseToken;
     address public override immutable extensionDelegate;
     address public override immutable baseTokenPriceFeed;
+    uint public override immutable targetReserves;
+    uint8 public override immutable decimals;
 
 
     uint256 internal immutable asset00_a;
@@ -52,6 +54,23 @@ contract Comet is CometMainInterface{
     uint256 internal immutable asset14_b;
 
     constructor( Configuration memory config){
+        uint8 decimals_=ERC20( config.baseToken).decimals();
+        if( decimals_ >MAX_BASE_DECIMALS) revert BadDecimals();
+        if(config.storeFromPriceFactor > FACTOR_SCALE) revert BadDiscount();
+        if(config.assetConfigs.length > MAX_ASSETS) revert TooManyAssets();
+        if(config.baseMinForRewards ==0) revert BadMinimum();
+        if(IPriceFeed( config.baseTokenPriceFeed).decimals() != PRICE_FEED_DECIMALS) revert BadDecimals();
+        unchecked{
+            targetReserves = config.targetReserves;
+            baseMinForRewards = config.baseMinForRewards;
+            baseTrackingSupplySpeed = config.baseTrackingSupplySpeed;
+            baseTrackingBorrowSpeed = config.baseTrackingBorrowSpeed;
+            baseToken = config.baseToken;
+            extensionDelegate = config.extensionDelegate;
+            baseTokenPriceFeed = config.baseTokenPriceFeed;
+            decimals = decimals_;
+            baseScale = uint64( 10 ** decimals_);
+        }
         // Set asset info
         numAssets = uint8(config.assetConfigs.length);
 
@@ -77,7 +96,7 @@ contract Comet is CometMainInterface{
     // Pack one asset at time
     function getPackedAssetInternal(AssetConfig[] memory assetConfigs, uint8 i) internal view returns(uint256, uint256){
         AssetConfig memory assetConfig;
-        if( i<assetConfig.length){
+        if( i<assetConfigs.length){
             assembly{  // store in assetConfig = assetConfigs[i]
                 assetConfig := mload( add( add( assetConfigs, 0x20), mul( i, 0x20)))
             }
@@ -207,6 +226,17 @@ contract Comet is CometMainInterface{
         });
     }
 
+    function getAssetInfoByAddress( address asset) override public view returns( AssetInfo memory){
+        for(uint8 i=0; i<numAssets;){
+            AssetInfo memory assetInfo = getAssetInfo(i);
+            if( assetInfo.asset == asset){
+                return assetInfo;
+            }
+            unchecked{ i++;}
+        }
+        revert BadAsset();
+    }
+
     // @return the utilization: ratio about the total amount borrowed from the supply pool in the protocol
     function getUtilization() override public view returns(uint){
         uint totalSupply_ = presentValueSupply( baseSupplyIndex, totalSupplyBase);
@@ -222,7 +252,9 @@ contract Comet is CometMainInterface{
     function mulFactor( uint n, uint factor) internal pure returns( uint){
         return n*factor/FACTOR_SCALE;
     }
-
+    function mulPrice(uint n, uint price, uint64 fromScale) internal pure returns (uint) {
+        return n * price / fromScale;
+    }
     function divBaseWei(uint n, uint baseWei) internal view returns (uint) {
         return n * baseScale / baseWei;
     }
@@ -239,7 +271,7 @@ contract Comet is CometMainInterface{
         return n * signed256(price) / int256(uint256(fromScale));
     }
     // @return the timestamp in uint40
-    function getNowInternal() override internal view returns(uint40){
+    function getNowInternal() virtual internal view returns(uint40){
         if( block.timestamp >= 2**40) revert TimestampTooLarge();
         return uint40(block.timestamp);
     }
@@ -261,6 +293,10 @@ contract Comet is CometMainInterface{
         if( !success) revert TransferInFailed();
     }
 
+    function doTransferOut( address asset, address to, uint amount) internal{
+        bool success = ERC20(asset).transfer(to, amount);
+        if(!success) revert TransferOutFailed();
+    }
     // Calculate baseSupplyIndex and baseBorrowIndex
     function accruedInterestIndices( uint timeElapsed) internal view returns( uint64, uint64){
         uint64 baseSupplyIndex_ = baseSupplyIndex;
@@ -346,20 +382,20 @@ contract Comet is CometMainInterface{
     // Get lender's balance; It increases over time as long as utilization doesnt become 0
     function balanceOf( address account) override public view returns( uint256){
         (uint64 baseSupplyIndex_, ) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
-        int104 principal = UserBasic[account].principal;
+        int104 principal = userBasic[account].principal;
         return principal > 0 ? presentValueSupply( baseSupplyIndex_, unsigned104( principal)) : 0;
     }
 
     // Calculate present value of the total USDC deposited
     function totalSupply() override external view returns(uint256){
-        (uint256 baseSupplyIndex_, ) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
-        return presentValueSupply( totalSupplyBase, baseSupplyIndex_);
+        (uint64 baseSupplyIndex_, ) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
+        return presentValueSupply( baseSupplyIndex_, totalSupplyBase);
     }
 
     // Calculate the present value of the total USDC borrowed (accrued interest is included)
     function totalBorrow() override external view returns( uint256){
-        (, uint256 baseBorrowIndex_) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
-        return presentValueBorrow( totalBorrowBase, baseBorrowIndex_);
+        (, uint64 baseBorrowIndex_) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
+        return presentValueBorrow( baseBorrowIndex_, totalBorrowBase);
     }
 
     function transfer(address dst, uint256 amount) override external returns(bool){
@@ -443,11 +479,11 @@ contract Comet is CometMainInterface{
         }
 
         uint256 gasUsed = startGas - gasleft();
-        liquidatorPoints memory points = liquidatorPoints[ absorber];
+        LiquidatorPoints memory points = liquidatorPoints[ absorber];
         points.numAbsorbs++;
         points.numAbsorbed += safe64( accounts.length);
         points.approxSpend += safe128( gasUsed * block.basefee);
-        liquidatorPoints[absorb] = points;
+        liquidatorPoints[absorber] = points;
     }
 
     function absorbInternal( address absorber, address account) internal{
@@ -456,7 +492,7 @@ contract Comet is CometMainInterface{
         UserBasic memory accountUser = userBasic[account];
         int104 oldPrincipal = accountUser.principal;
         int256 oldBalance = presentValue( oldPrincipal);
-        uint256 assetsIn = accountUser.assetsIn;
+        uint16 assetsIn = accountUser.assetsIn;
 
         uint256 basePrice = getPrice( baseTokenPriceFeed);
         uint deltaValue = 0;  // stores the sum of account's all assets value based on LiquidationFactor
@@ -521,6 +557,26 @@ contract Comet is CometMainInterface{
         
         doTransferOut( asset, recipient, safe128( collateralAmount));
         emit BuyCollateral( msg.sender, asset, baseAmount, collateralAmount);
+    }
+
+    function getCollateralReserves( address asset) override public view returns(uint){
+        return ERC20(asset).balanceOf( address(this)) - totalsCollateral[asset].totalSupplyAsset;
+    }
+    function getReserves() override public view returns(int){
+        (uint64 baseSupplyIndex_, uint64 baseBorrowIndex_) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
+        uint balance = ERC20(baseToken).balanceOf( address(this));
+        uint totalSupply_ = presentValueSupply(baseSupplyIndex_, totalSupplyBase);
+        uint totalBorrow_ = presentValueBorrow( baseBorrowIndex_, totalBorrowBase);
+        return signed256(balance) - signed256(totalSupply_) + signed256(totalBorrow_);
+    }
+
+    function getPrice(address priceFeed) override public view returns (uint256) {
+        (, int price, , , ) = IPriceFeed(priceFeed).latestRoundData();
+        if (price <= 0) revert BadPrice();
+        return uint256(price);
+    }
+    function quoteCollateral( address asset, uint baseAmount) override public view returns(uint){
+        AssetInfo memory assetInfo = getAssetInfoByAddress( asset);
     }
     // Responsable from calling ComitExt.sol f()
     fallback() external payable{

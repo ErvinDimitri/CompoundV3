@@ -6,6 +6,8 @@ import "./CometMath.sol";
 import "./CometStorage.sol";
 abstract contract CometCore is CometConfiguration, CometStorage, CometMath{
 
+    uint8 internal constant MAX_BASE_DECIMALS=18;
+    uint8 internal constant MAX_ASSETS=15;  // In binary: 1111 where each bit represents an asset
     uint64 internal constant MAX_COLLATERAL_FACTOR = FACTOR_SCALE;  // 1:1
     uint8 internal constant PAUSE_SUPPLY_OFFSET = 0;
     uint8 internal constant PAUSE_TRANSFER_OFFSET = 1;
@@ -24,7 +26,7 @@ abstract contract CometCore is CometConfiguration, CometStorage, CometMath{
         uint8 offset;
         address asset;
         address priceFeed;
-        uint8 scale;
+        uint64 scale;
         uint64 borrowCollateralFactor;  // Amount that can be borrowed (%)
         uint64 liquidateCollateralFactor;   // Point when the collateral gets liquidated (%)
         uint64 liquidationFactor;  // Liquidation penality = 1 - liquidationFactor | A fee to pay for being liquidated
