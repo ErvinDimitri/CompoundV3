@@ -62,4 +62,30 @@ export default async function deploy( deploymentManager: DeploymentManager, depl
         assetConfigs: [assetConfig0, assetConfig1],
     });
     const {rewards} = deployed;
+
+    await deploymentManager.idempotent(
+        async () => (await NOT_token.balanceOf( rewards.address)).eq(0),
+        async () => {
+            trace(`Sending some NOT to CometRewards`);
+            const amount = exp(1_000_000, 6);
+            trace( await wait(NOT_token.connect(signer).transfer(rewards.address, amount)));
+            trace(`NOT balanceOf(${rewards.address}): ${await NOT_token.balanceOf(rewards.address)}`);
+        }
+    );
+
+    // MINT tokens
+    trace(`Minting as ${signer.address} ...`);
+    await Promise.all(
+        [[NOT_token, 1e6], [DAI_token, 1e8], [UNI_token, 1e3]].map(([asset, units])=>{
+            return deploymentManager.idempotent(
+                async () => (await asset.balanceOf(fauceteer.address)).eq(0),
+                async () => {
+                    trace(`Minting ${units} ${await asset.symbol()} to fauceteer`);
+                    const amount = exp( units, await asset.decimals());
+                    trace(await wait( asset.connect(signer).allocateTo(fauceteer.address, amount)));
+                    trace( `asset BalanceOf(${signer.address}): ${await asset.balanceOf(signer.address)}`);
+                }
+            );
+        })
+    );
 }
