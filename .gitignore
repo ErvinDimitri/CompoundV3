@@ -1,4 +1,8 @@
 node_modules
+yarn-error.log
+
+.DS_Store
+.vscode
 .env
 coverage
 coverage.json
@@ -9,3 +13,16 @@ typechain-types
 cache
 artifacts
 
+# Build files
+artifacts/
+build/
+cache/
+dist/
+deployments/*/.contracts
+deployments/*/*/verify
+deployments/*/*/aliases.json
+forge/cache
+forge/out
+
+test-results.json
+scenario-results.json
