@@ -6,18 +6,22 @@ import "./CometCore.sol";
 // Interface for Comet.sol
 abstract contract CometMainInterface is CometCore{
     error Absurd();
+    error AlreadyInitialized();
     error BadAsset();
     error BadDecimals();
     error BadDiscount();
     error BadMinimum();
     error BadPrice();
     error BorrowCFTooLarge();
+    error BorrowTooSmall();
     error InsufficientReserves();
     error LiquidateCFTooLarge();
+    error NotCollateralized();
     error NoSelfTransfer();
     error NotForSale();
     error NotLiquidatable();
     error Paused();
+    error SupplyCapExceeded();
     error TimestampTooLarge();
     error TooManyAssets();
     error TooMuchSlippage();
@@ -27,9 +31,20 @@ abstract contract CometMainInterface is CometCore{
 
     event Supply( address indexed from, address indexed dst, uint amount);
     event Transfer( address indexed from, address indexed to, uint amount);
+    event Withdraw( address indexed src, address indexed to, uint amount);
+
+    event WithdrawReserves( address indexed to, uint amount);  // Withdrawn by governor
+
     event AbsorbCollateral( address indexed absorber, address indexed borrower, address indexed asset, uint collateralAbsorbed, uint usdValue);
-    event AbsorbDebit( address indexed absorber, address indexed account, uint256 basePaidOut, uint256 valueOfBasePaidOut);
     event BuyCollateral( address indexed buyer, address indexed asset, uint256 baseAmount, uint256 collateralAmount);
+    event SupplyCollateral( address indexed from, address indexed dst, address indexed asset, uint amount);
+    event TransferCollateral( address indexed src, address indexed dst, address indexed asset, uint amount);
+    event WithdrawCollateral(address indexed src, address indexed to, uint amount);
+    
+    // Used in scroll
+    event AbsorbDebt( address indexed absorber, address indexed account, uint256 basePaidOut, uint256 valueOfBasePaidOut);
+
+    event PauseAction( bool supplyPaused, bool transferPaused, bool withdrawPaused, bool absorbPaused, bool buyPaused);
 
     function getAssetInfo( uint8 i) virtual public view returns( AssetInfo memory);
     function getUtilization() virtual public view returns(uint);
@@ -61,5 +76,6 @@ abstract contract CometMainInterface is CometCore{
     function baseTokenPriceFeed() virtual external view returns(address);
     function targetReserves() virtual external view returns(uint);
     function decimals() virtual external view returns(uint8);
+    function accrueAccount( address account) virtual external;
 
 }   

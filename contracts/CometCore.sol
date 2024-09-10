@@ -19,8 +19,12 @@ abstract contract CometCore is CometConfiguration, CometStorage, CometMath{
 
     // depends on time/rate scales and not on base token
     uint64 internal constant BASE_INDEX_SCALE = 1e15;
+    uint64 internal constant BASE_ACCRUAL_SCALE = 1e6;
 
     uint64 internal constant FACTOR_SCALE = 1e18;
+
+    uint64 internal constant SECONDS_PER_YEAR = 31_536_000;
+    uint64 internal constant PRICE_SCALE = uint64(10 ** PRICE_FEED_DECIMALS);
     
     struct AssetInfo{  // From the the same from CometConfiguration.sol
         uint8 offset;

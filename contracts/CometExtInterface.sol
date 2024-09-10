@@ -12,6 +12,12 @@ abstract contract CometExtInterface is CometCore{
     error InvalidValueV();
     error SignatureExpired();
 
+     function baseAccrualScale() virtual external pure returns (uint64);
+    function baseIndexScale() virtual external pure returns (uint64);
+    function factorScale() virtual external pure returns (uint64);
+    function priceScale() virtual external pure returns (uint64);
+    function maxAssets() virtual external pure returns (uint8);
+
     function approve( address spender, uint256 amount) virtual external returns(bool);
     function name() virtual public view returns (string memory);
     function symbol() virtual external view returns (string memory);
@@ -28,6 +34,8 @@ abstract contract CometExtInterface is CometCore{
         bytes32 s
     ) virtual external;
     function version() virtual external view returns (string memory);
+    function collateralBalanceOf( address account, address asset) virtual external view returns(uint128);
+    function baseTrackingAccrual( address account) virtual external view returns(uint64);
 
     event Approval( address indexed owner, address indexed spender, uint256 amount);
 }

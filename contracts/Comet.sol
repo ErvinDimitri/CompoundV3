@@ -267,6 +267,19 @@ contract Comet is CometMainInterface{
     function isInAsset( uint16 assetsIn, uint8 assetOffset) internal pure returns(bool){
         return (assetsIn & (uint16(1) << assetOffset) != 0);
     }
+
+    function updateAssetsIn(
+        address account,
+        AssetInfo memory assetInfo,
+        uint128 initialUserBalance,
+        uint128 finalUserBalance
+    ) internal{
+        if( initialUserBalance == 0 && finalUserBalance != 0){
+            userBasic[account].assetsIn |= (uint16(1) << assetInfo.offset);
+        } else if( initialUserBalance != 0 && finalUserBalance == 0){
+            userBasic[account].assetsIn &= ~(uint16(1) << assetInfo.offset);
+        }
+    }
     function signedMulPrice(int n, uint price, uint64 fromScale) internal pure returns (int) {
         return n * signed256(price) / int256(uint256(fromScale));
     }
@@ -326,6 +339,13 @@ contract Comet is CometMainInterface{
             }
             lastAccrualTime = now_;
         }
+    }
+
+    // Used by CometRewards
+    function accrueAccount( address account) override external{
+        accrueInternal();
+        UserBasic memory basic = userBasic[account];
+        updateBasePrincipal( account, basic, basic.principal);
     }
 
     /* F() called when a user deposits
@@ -536,7 +556,7 @@ contract Comet is CometMainInterface{
 
         uint256 basePaidOut = unsigned256( newBalance - oldBalance);
         uint256 valueOfBasePaidOut = mulPrice( basePaidOut, basePrice, uint64( baseScale));
-        emit AbsorbDebit( absorber, account, basePaidOut, valueOfBasePaidOut);
+        emit AbsorbDebt( absorber, account, basePaidOut, valueOfBasePaidOut);
 
         if(newPrincipal > 0){
             emit Transfer( address(0), account, presentValueSupply( baseSupplyIndex, unsigned104(newPrincipal)));

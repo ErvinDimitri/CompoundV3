@@ -29,6 +29,24 @@ contract Comet is CometExtInterface{
         name32 = config.name32;
         symbol32 = config.symbol32;
     }
+
+    // Returns the current collateral of the account for certain asset
+    function collateralBalanceOf( address account, address asset) override external view returns(uint128){
+        return userCollateral[account][asset].balance;
+    }
+    // @return the accrued rewards scaled by BASE_ACCRUAL_SCALE;   used by Comet Rewards
+    function baseTrackingAccrual( address account) override external view returns(uint64){
+        return userBasic[account].baseTrackingAccrual;
+    }
+    
+    /** External getters for internal constants **/
+    function baseAccrualScale() override external pure returns (uint64) { return BASE_ACCRUAL_SCALE; }
+    function baseIndexScale() override external pure returns (uint64) { return BASE_INDEX_SCALE; }
+    function factorScale() override external pure returns (uint64) { return FACTOR_SCALE; }
+    function priceScale() override external pure returns (uint64) { return PRICE_SCALE; }
+    function maxAssets() override external pure returns (uint8) { return MAX_ASSETS; }
+
+
     function name() override public view returns (string memory) {
         uint8 i;
         for (i = 0; i < 32; ) {

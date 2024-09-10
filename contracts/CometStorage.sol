@@ -4,6 +4,19 @@ pragma solidity ^0.8.9;
 // Stores vars used in Comet
 contract CometStorage {
 
+    struct TotalsBasic{
+        //Slot 1
+        uint64 baseSupplyIndex;
+        uint64 baseBorrowIndex;
+        uint64 trackingSupplyIndex;
+        uint64 trackingBorrowIndex;
+
+        //Slot 2
+        uint104 totalSupplyBase;
+        uint104 totalBorrowBase;
+        uint40 lastAccrualTime;
+        uint8 pauseFlags;
+    }
     struct TotalsCollateral{
         uint128 totalSupplyAsset;
         uint128 _reserved;
