@@ -21,6 +21,8 @@ contract Comet is CometMainInterface{
     uint public override immutable targetReserves;
     uint8 public override immutable decimals;
 
+    uint public override immutable supplyKink;  //The point in the supply rates separating the low interest rate slope and the high interest rate slope (factor)
+    uint public override immutable borrowKink;  //The point in the borrow rate separating the low interest rate slope and the high interest rate slope 
 
     uint256 internal immutable asset00_a;
     uint256 internal immutable asset00_b;
@@ -61,6 +63,8 @@ contract Comet is CometMainInterface{
         if(config.baseMinForRewards ==0) revert BadMinimum();
         if(IPriceFeed( config.baseTokenPriceFeed).decimals() != PRICE_FEED_DECIMALS) revert BadDecimals();
         unchecked{
+            supplyKink = config.supplyKink;
+            borrowKink = config.borrowKink;
             targetReserves = config.targetReserves;
             baseMinForRewards = config.baseMinForRewards;
             baseTrackingSupplySpeed = config.baseTrackingSupplySpeed;
@@ -331,7 +335,7 @@ contract Comet is CometMainInterface{
         uint timeElapsed = uint256( now_ - lastAccrualTime);
         if(timeElapsed > 0){
             (baseSupplyIndex, baseBorrowIndex) = accruedInterestIndices( timeElapsed);
-            if( totalSupplyBase >= baseMinForRewards){
+            if( totalSupplyBase >= baseMinForRewards){  // TrackingSupplyIndex will not increase when the totalSupplyBase is less than the baseMinForRewards, avoiding the trackingSupplyIndex to overflow quickly
                 trackingSupplyIndex += safe64( divBaseWei(baseTrackingSupplySpeed * timeElapsed, totalSupplyBase));                
             }
             if( totalBorrowBase >= baseMinForRewards){
@@ -353,16 +357,28 @@ contract Comet is CometMainInterface{
         1.convert the principal value to present value and sum with deposited amount
         2. Convert back to principal value
        Update the totalizers vars: totalSupplyBase and totalBorrowBase
-    */
 
-    // ToDo To implement
+       @return The per second supply rate at `utilization`
+    */    
     function getSupplyRate( uint utilization) override public view returns( uint64){
-        return 0;
+        if( utilization <= supplyKink){
+            // interestRateBase + interestRateSlopeLow * utilization
+            return safe64( supplyPerSecondInterestRateBase + mulFactor( supplyPerSecondInterestRateSlopeLow, utilization));
+        }else{
+            // interestRateBase + interestRateSlopeLow * kink + interestRateSlopeHigh * (utilization - kink)
+            return safe64( supplyPerSecondInterestRateBase + mulFactor( supplyPerSecondInterestRateSlopeLow, supplyKink) + mulFactor( supplyPerSecondInterestRateSlopeHigh, utilization-kink));
+        }
     }
 
-    // ToDo to Implement
+    // @return The per second borrow rate at `utilization`
     function getBorrowRate( uint utilization) override public view returns( uint64){
-        return 0;
+        if( utilization <= borrowKink){
+            //interestRateBase + interestRateSlopeLow *utilization
+            return safe64( borrowPerSecondInterestRateBase + mulFactor( borrowPerSecondInterestRateSlopeLow, utilization));
+        }else{
+            // interestRateBase + interestRateSlopeLow * kink + interestRateSlopeHigh * (utilization-kink)
+            return safe64( borrowPerSecondInterestRateBase + mulFactor( borrowPerSecondInterestRateSlopeLow, kink) + mulFactor( borrowPerSecondInterestRateSlopeHigh, utilization-borrowKink));
+        }
     }
 
     // ToDo To implement

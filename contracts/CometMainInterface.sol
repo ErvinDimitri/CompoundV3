@@ -66,6 +66,10 @@ abstract contract CometMainInterface is CometCore{
     function getAssetInfoByAddress( address asset) virtual public view returns( AssetInfo memory);
     function getCollateralReserves( address asset) virtual public view returns(uint);
     function getPrice(address priceFeed) virtual public view returns (uint256);
+    function accrueAccount( address account) virtual external;
+    
+    
+    // Immutable vars
     function numAssets() virtual external view returns(uint8);
     function baseScale() virtual external view returns(uint);
     function baseMinForRewards() virtual external view returns(uint);
@@ -76,6 +80,7 @@ abstract contract CometMainInterface is CometCore{
     function baseTokenPriceFeed() virtual external view returns(address);
     function targetReserves() virtual external view returns(uint);
     function decimals() virtual external view returns(uint8);
-    function accrueAccount( address account) virtual external;
+    function supplyKink() virtual external view returns(uint);
+    function borrowKink() virtual external view returns(uint);
 
 }   

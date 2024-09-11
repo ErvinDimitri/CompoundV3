@@ -6,10 +6,10 @@ contract CometStorage {
 
     struct TotalsBasic{
         //Slot 1
-        uint64 baseSupplyIndex;
-        uint64 baseBorrowIndex;
-        uint64 trackingSupplyIndex;
-        uint64 trackingBorrowIndex;
+        uint64 baseSupplyIndex;  // Value of a dollar lended
+        uint64 baseBorrowIndex;  // Value of a dollar borrowed
+        uint64 trackingSupplyIndex;  // Track the value of rewards for a single USDC
+        uint64 trackingBorrowIndex;  // Track the value of rewards for a single USDC
 
         //Slot 2
         uint104 totalSupplyBase;
@@ -43,8 +43,8 @@ contract CometStorage {
 
     uint64 internal baseSupplyIndex;  // it's an "exchange rate" to swap present value to principal value and vice versa
     uint64 internal baseBorrowIndex;  // Tracks the accumulation of debt
-    uint64 internal trackingSupplyIndex;
-    uint64 internal trackingBorrowIndex;
+    uint64 internal trackingSupplyIndex;  // Track the value of rewards for a single USDC
+    uint64 internal trackingBorrowIndex;  // Track the value of rewards for a single USDC
     uint104 internal totalSupplyBase;  // sum of all amount deposited by lenders
     uint104 internal totalBorrowBase;  // sum of all amount deposited by borrowers
     uint40 internal lastAccrualTime;  // updated @ Comet::accrueInternal()
