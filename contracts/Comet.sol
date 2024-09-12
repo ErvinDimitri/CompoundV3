@@ -13,8 +13,8 @@ contract Comet is CometMainInterface{
     uint8 public override immutable numAssets;
     uint public override immutable baseScale;
     uint public override immutable baseMinForRewards;
-    uint public override immutable baseTrackingSupplySpeed;
-    uint public override immutable baseTrackingBorrowSpeed;
+    uint public override immutable baseTrackingSupplySpeed;  // Reward per unit of time
+    uint public override immutable baseTrackingBorrowSpeed;  // Reward per unit of time
     address public override immutable baseToken;
     address public override immutable extensionDelegate;
     address public override immutable baseTokenPriceFeed;

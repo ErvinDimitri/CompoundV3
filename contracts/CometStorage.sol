@@ -23,6 +23,7 @@ contract CometStorage {
     }
     struct UserBasic{
         int64 principal;  // Value of dollar inside the Compound; if > 0 ? lender : borrower (principal value of the user debt)
+        // It's the baseSupplyIndex or baseBorrowIndex when last time it was called
         uint64 baseTrackingIndex;  // similar to baseTrackingIndex; not in use
         uint64 baseTrackingAccrued;  // used by CometRewards to determine the amount of COMP to reward
         uint16 assetsIn;  // used by borrowers to know if a collateral is in use
