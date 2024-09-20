@@ -386,9 +386,26 @@ contract Comet is CometMainInterface{
 
     }
 
-    // ToDo to implement
+    // 1. Calculates the amount of rewards since last time the user interacted with the protocol
+    // 2.Updates userbasic.baseTrackingAccrued and userBasic.baseTrackingIndex
     function updateBasePrincipal( address account, UserBasic memory userBasic, int104 principalNew) internal{
+        int104 principal = basic.principal;
+        basic.principal = principalNew;
 
+        if( principal >= 0){  // For lenders
+            uint indexDelta = uint256( trackingSupplyIndex - basic.baseTrackingIndex);
+            basic.baseTrackingAccrued += safe64(uint104(principal) * indexDelta /trackingIndexScale / accrualDescaleFactor);
+        }else{  // For Borrowers
+            uint indexDelta = uint256( trackingBorrowIndex - basic.baseTrackingIndex);
+            basic.baseTrackingAccrued += safe64(uint104( -principal) * indexDelta/ trackingIndexScale/ accrualDescaleFactor);
+        }
+
+        if(principalNew>=0){
+            basic.baseTrackingIndex = trackingSupplyIndex;
+        }else{
+            basic.baseTrackingIndex = trackingBorrowIndex;
+        }
+        userBasic[account] = basic;
     }
     function supplyBase( address from, address dst, uint256 amount) internal{
         doTransferIn( baseToken, from, amount);
