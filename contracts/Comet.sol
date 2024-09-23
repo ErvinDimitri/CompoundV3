@@ -272,6 +272,7 @@ contract Comet is CometMainInterface{
         return (assetsIn & (uint16(1) << assetOffset) != 0);
     }
 
+    // Change state if the user has or not the asset
     function updateAssetsIn(
         address account,
         AssetInfo memory assetInfo,
@@ -293,6 +294,9 @@ contract Comet is CometMainInterface{
         return uint40(block.timestamp);
     }
     
+     function isSupplyPaused() override public view returns (bool) {
+        return toBool(pauseFlags & (uint8(1) << PAUSE_SUPPLY_OFFSET));
+    }
     function isTransferPaused() override public view returns(bool){
         return toBool( pauseFlags & (uint8(1) << PAUSE_TRANSFER_OFFSET));
     }
@@ -407,6 +411,31 @@ contract Comet is CometMainInterface{
         }
         userBasic[account] = basic;
     }
+
+    function supply(address asset, uint amount) override external{
+        return supplyInternal( msg.sender, msg.sender, msg.sender, asset, amount);
+    }
+    function supplyTo(address dst, address asset, uint amount) override external{
+        return supplyInternal( msg.sender, msg.sender, dst, asset, amount);
+    }
+    function supplyFrom(address from, address dst, address asset, uint amount) override external{
+        return supplyInternal( msg.sender, from, dst, asset, amount);
+    }
+    // Lend Base token into protocol, in case amount == uint256.max, it will be used as a flag to repay the borrow amount
+    // In case it is not the base token, it will supply the collateral
+    function supplyInternal(address operator, address from, address dst, address asset, uint amount) internal{
+        if( isSupplyPaused()) revert Paused();
+        if( !hasPermission(from, operator)) revert Unauthorized();
+
+        if(asset == baseToken){
+            if( amount == type(uint256).max){
+                amount = borrowBalanceOf(dst);
+            }
+            return supplyBase( from, dst, amount);
+        }else{
+            return supplyCollateral( from, dst, asset, safe128(amount));
+        }
+    }
     function supplyBase( address from, address dst, uint256 amount) internal{
         doTransferIn( baseToken, from, amount);
 
@@ -431,12 +460,43 @@ contract Comet is CometMainInterface{
         }
     }
 
+    function supplyCollateral( address from, address dst, address asset, uint128 amount) internal{
+        doTransferIn( asset, from, amount);
+
+        AssetInfo memory assetInfo = getAssetInfoByAddress(asset);
+        TotalsCollateral memory totals = totalsCollateral[asset];
+        totals.totalSupplyAsset += amount;
+        if( totals.totalSupplyAsset > assetInfo.supplyCap) revert SupplyCapExceeded();
+
+        uint128 dstCollateral = userCollateral[dst][asset].balance;
+        uint128 dstCollateralNew = dstCollateral + amount;
+
+        totalsCollateral[asset] =totals;
+        userCollateral[dst][asset].balance = dstCollateralNew;
+
+        updateAssetsIn( dst, assetInfo, dstCollateral, dstCollateralNew);
+
+        emit SupplyCollateral(from, dst, asset, amount);
+    }
 
     // Get lender's balance; It increases over time as long as utilization doesnt become 0
     function balanceOf( address account) override public view returns( uint256){
         (uint64 baseSupplyIndex_, ) = accruedInterestIndices( getNowInternal() - lastAccrualTime);
         int104 principal = userBasic[account].principal;
         return principal > 0 ? presentValueSupply( baseSupplyIndex_, unsigned104( principal)) : 0;
+    }
+
+    /**
+     * GET BORROW's balance
+     * @notice Query the current negative base balance of an account or zero
+     * @dev Note: uses updated interest indices to calculate
+     * @param account The account whose balance to query
+     * @return The present day base balance magnitude of the account, if negative
+     */
+    function borrowBalanceOf(address account) override public view returns (uint256) {
+        (, uint64 baseBorrowIndex_) = accruedInterestIndices(getNowInternal() - lastAccrualTime);
+        int104 principal = userBasic[account].principal;
+        return principal < 0 ? presentValueBorrow(baseBorrowIndex_, unsigned104(-principal)) : 0;
     }
 
     // Calculate present value of the total USDC deposited

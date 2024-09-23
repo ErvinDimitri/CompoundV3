@@ -46,6 +46,18 @@ contract Comet is CometExtInterface{
     function priceScale() override external pure returns (uint64) { return PRICE_SCALE; }
     function maxAssets() override external pure returns (uint8) { return MAX_ASSETS; }
 
+    function totalsBasic() public override view returns (TotalsBasic memory) {
+        return TotalsBasic({
+            baseSupplyIndex: baseSupplyIndex,
+            baseBorrowIndex: baseBorrowIndex,
+            trackingSupplyIndex: trackingSupplyIndex,
+            trackingBorrowIndex: trackingBorrowIndex,
+            totalSupplyBase: totalSupplyBase,
+            totalBorrowBase: totalBorrowBase,
+            lastAccrualTime: lastAccrualTime,
+            pauseFlags: pauseFlags
+        });
+    }
 
     function name() override public view returns (string memory) {
         uint8 i;

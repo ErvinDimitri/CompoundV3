@@ -51,12 +51,14 @@ abstract contract CometMainInterface is CometCore{
     function totalSupply() virtual external view returns(uint256);
     function totalBorrow() virtual external view returns(uint256);
     function isLiquidatable( address account) virtual public view returns(bool);
+     function isSupplyPaused() virtual public view returns (bool);
     function isTransferPaused() virtual public view returns(bool);
     function isAbsorbPaused() virtual public view returns (bool);
     function isBuyPaused() virtual public view returns (bool);
     function absorb(address absorber, address[] calldata accounts) virtual external;
     function buyCollateral( address asset, uint256 minAmount, uint256 baseAmount, address recipient) virtual external;
     function balanceOf( address account) virtual public view returns( uint256);
+    function borrowBalanceOf(address account) virtual public view returns (uint256);
     function transfer(address dst, uint256 amount) virtual external returns(bool);
     function transferFrom( address src, address dst, uint256 amount) virtual external returns(bool);
     function getSupplyRate( uint utilization) virtual public view returns( uint64);
@@ -67,7 +69,9 @@ abstract contract CometMainInterface is CometCore{
     function getCollateralReserves( address asset) virtual public view returns(uint);
     function getPrice(address priceFeed) virtual public view returns (uint256);
     function accrueAccount( address account) virtual external;
-    
+    function supply( address asset, uint amount) virtual external;
+    function supplyTo(address dst, address asset, uint amount) virtual external;
+    function supplyFrom(address from, address dst, address asset, uint amount) virtual external;
     
     // Immutable vars
     function numAssets() virtual external view returns(uint8);

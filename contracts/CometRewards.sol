@@ -185,12 +185,12 @@ contract CometRewards {
         RewardConfig memory config = rewardConfig[comet];
         if (config.token == address(0)) revert NotSupported(comet);
 
-        if (shouldAccrue) {
+        if (shouldAccrue) {  // Set true, in case the user only claiming the rewards, in case the user is performing other operations and then call claimRewards, it isnt necessary to calculate again the acrrue
             CometInterface(comet).accrueAccount(src);
         }
 
         uint claimed = rewardsClaimed[comet][src];
-        uint accrued = getRewardAccrued(comet, src, config);
+        uint accrued = getRewardAccrued(comet, src, config);  // returns the userBasic.baseTrackingAccrued
 
         if (accrued > claimed) {
             uint owed = accrued - claimed;
